@@ -1,13 +1,14 @@
 package br.com.forum.service;
 
 import java.net.URI;
-import java.util.List;
 import java.util.Optional;
 
 import javax.transaction.Transactional;
 import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -29,12 +30,12 @@ public class TopicoService {
 	@Autowired
 	private CursoService cursoService;
 
-	public List<TopicoDto> lista(String nomeCurso) {
+	public Page<TopicoDto> lista(String nomeCurso, Pageable paginacao) {
 		if (nomeCurso == null) {
-			List<Topico> topicos = topicoRepository.findAll();
+			Page<Topico> topicos = topicoRepository.findAll(paginacao);
 			return TopicoDto.converter(topicos);
 		} else {
-			List<Topico> topicos = topicoRepository.findByCursoNome(nomeCurso);
+			Page<Topico> topicos = topicoRepository.findByCursoNome(nomeCurso, paginacao);
 			return TopicoDto.converter(topicos);
 		}
 	}
@@ -54,30 +55,35 @@ public class TopicoService {
 
 	public ResponseEntity<DetalhesDoTopicoDto> detalhar(Long id) {
 		Optional<Topico> topico = topicoRepository.findById(id);
-		if (topico.isPresent()) {
-			return ResponseEntity.ok(new DetalhesDoTopicoDto(topico.get()));
+		if (!topico.isPresent()) {
+			return ResponseEntity.notFound().build();
 		}
-		return ResponseEntity.notFound().build();
+		return ResponseEntity.ok(new DetalhesDoTopicoDto(topico.get()));
+
 	}
 
 	@Transactional
 	public ResponseEntity<TopicoDto> atualizar(Long id, @Valid AtualizacaoTopicoForm form) {
 		Optional<Topico> topicoFind = topicoRepository.findById(id);
-		if (topicoFind.isPresent()) {
-			Topico topico = form.atualizar(id, topicoRepository);
-			return ResponseEntity.ok(new TopicoDto(topico));
+
+		if (!topicoFind.isPresent()) {
+			return ResponseEntity.notFound().build();
 		}
-		return ResponseEntity.notFound().build();
+
+		Topico topico = form.atualizar(id, topicoRepository);
+		return ResponseEntity.ok(new TopicoDto(topico));
 	}
 
 	@Transactional
 	public ResponseEntity<?> remover(Long id) {
 		Optional<Topico> topicoFind = topicoRepository.findById(id);
-		if (topicoFind.isPresent()) {
-			topicoRepository.deleteById(id);
-			return ResponseEntity.ok().build();
+		
+		if (!topicoFind.isPresent()) {
+			return ResponseEntity.notFound().build();
 		}
-		return ResponseEntity.notFound().build();
+
+		topicoRepository.deleteById(id);
+		return ResponseEntity.ok().build();
 	}
 
 }
